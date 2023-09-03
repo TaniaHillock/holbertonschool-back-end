@@ -1,39 +1,36 @@
 #!/usr/bin/python3
-"""
-script that, using this REST API, for a given employee ID,
-returns information about his/her TODO list progress in JSON format.
-"""
+""" python script to export data in json format"""
 import json
-from sys import argv
-from urllib.request import urlopen
+import requests
 
 
-def for_api():
-    EMPLOYEE_NAME = None
-    TOTAL_NUMBER_OF_TASKS = 0
-    NUMBER_OF_DONE_TASKS = 0
-    url = "https://jsonplaceholder.typicode.com/users/{}".format(int(argv[1]))
-    req = urlopen(url).read().decode("utf-8")
-    json_user = json.loads(req)
-    EMPLOYEE_NAME = json_user['name']
-    url_todos = "https://jsonplaceholder.typicode.com\
-/users/{}/todos".format(int(argv[1]))
-    req_todos = urlopen(url_todos).read().decode("utf-8")
-    json_todos = json.loads(req_todos)
-    TOTAL_NUMBER_OF_TASKS = len(json_todos)
-    url_todos_task = "https://jsonplaceholder.typicode.com\
-/users/{}/todos/?completed=true".format(int(argv[1]))
-    req_todos_task = urlopen(url_todos_task).read().decode("utf-8")
-    json_todos_task = json.loads(req_todos_task)
-    NUMBER_OF_DONE_TASKS = len(json_todos_task)
-    print("Employee {} is done with tasks({}/{}):".format(
-                                                      EMPLOYEE_NAME,
-                                                      NUMBER_OF_DONE_TASKS,
-                                                      TOTAL_NUMBER_OF_TASKS))
-    for item in json_todos_task:
-        print("\t {}".format(item.get("title")))
-    with open("{}.json".format(int(argv[1])), "w") as jsonfile:
+def get_user_todos(id):
+    """Get API"""
+    todos_api = requests.get(
+        'https://jsonplaceholder.typicode.com/todos/')
+    user_api = requests.get(
+        'https://jsonplaceholder.typicode.com/users/{}'.format(id))
+    todo_data = todos_api.text
+    user_data = user_api.text
+    user = json.loads(user_data)
+    todos = json.loads(todo_data)
+    all_todos = []
+    for todo in todos:
+        if todo['userId'] == user['id']:
+            all_todos.append(
+                {"username": user['username'], "task": todo['title'],
+                 "completed": todo['completed']})
+    return all_todos
 
 
-if __name__ == "__main__":
-    for_api()
+if __name__ == '__main__':
+    user_apis = requests.get(
+        'https://jsonplaceholder.typicode.com/users/')
+    users_data = user_apis.text
+    users = json.loads(users_data)
+    final_dict = {}
+    for user in users:
+        final_dict[user['id']] = get_user_todos(str(user['id']))
+    filename = "todo_all_employees.json"
+    with open(filename, 'w') as file:
+        json.dump(final_dict, file)
